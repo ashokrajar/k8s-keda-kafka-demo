@@ -1,0 +1,26 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keda-kafka-demo-consumer
+  namespace: keda-kafka-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keda-kafka-demo-consumer
+  template:
+    metadata:
+      labels:
+        app: keda-kafka-demo-consumer
+    spec:
+      containers:
+      - name: keda-kafka-demo-consumer
+        image: ashokrajar/k8s-keda-kafka-demo-app:0.1.0
+        env:
+          - name: KAFKA_ENDPOINT
+            value: kafka.ashokraja.in:9092
+          - name: KAFKA_CONSUMER_GROUP
+            value: keda_kafka_demo_consumer
+          - name: KAFKA_TOPIC
+            value: keda_kafka_demo

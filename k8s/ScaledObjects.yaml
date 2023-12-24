@@ -1,0 +1,29 @@
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: kafka-autoscale-demo
+  namespace: keda-kafka-demo
+
+spec:
+  scaleTargetRef:
+    name: keda-kafka-demo-consumer
+  pollingInterval: 5
+  cooldownPeriod: 120
+  idleReplicaCount: 0
+  minReplicaCount:  1
+  maxReplicaCount: 5
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          selectPolicy: Disabled
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka.ashokraja.in:9092
+        consumerGroup: k8-keda-kafka-demo-consumer
+        topic: k8s_keda_autoscale_testing
+        offsetResetPolicy: latest
+        lagThreshold: '20'
+        activationLagThreshold: '0'

@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "go",
+            "name": "Run Consumer",
+            "goExecPath": "/opt/homebrew/bin/go",
+            "buildParams": [
+                "$PROJECT_DIR$/main.go"
+            ],
+            "runParams": ["consumer"],
+        },
+        {
+            "type": "go",
+            "name": "Run Producer",
+            "goExecPath": "/opt/homebrew/bin/go",
+            "buildParams": [
+                "$PROJECT_DIR$/main.go"
+            ],
+            "runParams": ["producer"],
+        },
+    ]
+}
