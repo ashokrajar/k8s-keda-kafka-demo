@@ -32,6 +32,9 @@ func main() {
 	}
 	log.Printf("KAFKA_TOPIC - %s\n", topic)
 
+	topicTwo := os.Getenv("KAFKA_TOPIC_TWO")
+	log.Printf("KAFKA_TOPIC_TWO - %s\n", topicTwo)
+
 	kafkaConfigMap := kafka.ConfigMap{
 		"bootstrap.servers": kafkaEndpoint,
 		//"security.protocol":                   "SASL_SSL",
@@ -42,7 +45,7 @@ func main() {
 	}
 
 	if args[1] == "consumer" {
-		consumer(consumerGroup, topic, kafkaConfigMap)
+		consumer(consumerGroup, topic, topicTwo, kafkaConfigMap)
 	} else if args[1] == "producer" {
 		producer(topic, kafkaConfigMap)
 	} else {
@@ -52,7 +55,7 @@ func main() {
 
 }
 
-func consumer(consumerGroup, topic string, kafkaConfigMap kafka.ConfigMap) {
+func consumer(consumerGroup, topic, topicTwo string, kafkaConfigMap kafka.ConfigMap) {
 
 	kafkaConfigMap.SetKey("group.id", consumerGroup)
 	kafkaConfigMap.SetKey("auto.offset.reset", "earliest")
@@ -67,6 +70,21 @@ func consumer(consumerGroup, topic string, kafkaConfigMap kafka.ConfigMap) {
 	if err != nil {
 		log.Fatalf("failed to subscribe to topic %v", err)
 	}
+
+	consumer2, err2 := kafka.NewConsumer(&kafkaConfigMap)
+	if topicTwo != "" {
+
+		if err2 != nil {
+			log.Fatalf("unable to create consumer %v", err2)
+		}
+		defer consumer2.Close()
+
+		err2 = consumer2.Subscribe(topicTwo, nil)
+		if err != nil {
+			log.Fatalf("failed to subscribe to topic %v", err)
+		}
+	}
+
 	exit := make(chan os.Signal, 1)
 	signal.Notify(exit, os.Interrupt)
 	var closed bool
@@ -85,7 +103,13 @@ func consumer(consumerGroup, topic string, kafkaConfigMap kafka.ConfigMap) {
 				log.Println("reading message ..")
 				msg, _ := consumer.ReadMessage(3 * time.Second)
 				if msg != nil {
-					log.Printf("message: %s topic: %d\n", string(msg.Value), msg.TopicPartition.Partition)
+					log.Printf("message: %s topic: %d consumer: One\n", string(msg.Value), msg.TopicPartition.Partition)
+				}
+				if topicTwo != "" {
+					msg2, _ := consumer2.ReadMessage(3 * time.Second)
+					if msg2 != nil {
+						log.Printf("message: %s topic: %d consumer: two\n", string(msg2.Value), msg2.TopicPartition.Partition)
+					}
 				}
 
 				sleepSec := 0.2

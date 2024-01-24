@@ -1,4 +1,4 @@
-module keda-kafka-demo-consumer
+module k8s-keda-kafka-demo
 
 go 1.20
 
