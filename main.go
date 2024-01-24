@@ -32,10 +32,19 @@ func main() {
 	}
 	log.Printf("KAFKA_TOPIC - %s\n", topic)
 
-	if args[1] != "consumer" {
-		consumer(kafkaEndpoint, consumerGroup, topic)
-	} else if args[1] != "producer" {
-		producer(kafkaEndpoint, consumerGroup, topic)
+	kafkaConfigMap := kafka.ConfigMap{
+		"bootstrap.servers": kafkaEndpoint,
+		//"security.protocol":                   "SASL_SSL",
+		//"sasl.mechanisms":                     "PLAIN",
+		//"sasl.username":                       "kafka-user",
+		//"sasl.password":                       "",
+		//"enable.ssl.certificate.verification": false,
+	}
+
+	if args[1] == "consumer" {
+		consumer(consumerGroup, topic, kafkaConfigMap)
+	} else if args[1] == "producer" {
+		producer(topic, kafkaConfigMap)
 	} else {
 		fmt.Println("I am not sure I understand that. I am limited to just 'consumer' & 'producer' commands.")
 		os.Exit(1)
@@ -43,13 +52,11 @@ func main() {
 
 }
 
-func consumer(kafkaEndpoint, consumerGroup, topic string) {
+func consumer(consumerGroup, topic string, kafkaConfigMap kafka.ConfigMap) {
 
-	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": kafkaEndpoint,
-		"group.id":          consumerGroup,
-		"auto.offset.reset": "earliest",
-	})
+	kafkaConfigMap.SetKey("group.id", consumerGroup)
+	kafkaConfigMap.SetKey("auto.offset.reset", "earliest")
+	consumer, err := kafka.NewConsumer(&kafkaConfigMap)
 
 	if err != nil {
 		log.Fatalf("unable to create consumer %v", err)
@@ -80,11 +87,10 @@ func consumer(kafkaEndpoint, consumerGroup, topic string) {
 				if msg != nil {
 					log.Printf("message: %s topic: %d\n", string(msg.Value), msg.TopicPartition.Partition)
 				}
-				sleepSec := 20
-				// trigger nuclei
-				log.Printf("Sleeping for %d sec\n", sleepSec)
-				time.Sleep(time.Duration(sleepSec) * time.Second)
 
+				sleepSec := 0.2
+				log.Printf("Sleeping for %f sec\n", sleepSec)
+				time.Sleep(time.Duration(sleepSec) * time.Second)
 			}
 		}
 
@@ -97,12 +103,8 @@ func consumer(kafkaEndpoint, consumerGroup, topic string) {
 
 }
 
-func producer(kafkaEndpoint, consumerGroup, topic string) {
-	producer, err := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers": kafkaEndpoint,
-		"group.id":          consumerGroup,
-		"auto.offset.reset": "earliest",
-	})
+func producer(topic string, kafkaConfigMap kafka.ConfigMap) {
+	producer, err := kafka.NewProducer(&kafkaConfigMap)
 
 	if err != nil {
 		fmt.Printf("Failed to create producer: %s", err)
@@ -126,21 +128,22 @@ func producer(kafkaEndpoint, consumerGroup, topic string) {
 	dataKey := [...]string{"key1", "key2", "key3", "key4", "key5", "key6"}
 	dataValue := [...]string{"value1", "value2", "value3", "value4", "value5"}
 
-	for n := 0; n < 1; n++ {
+	sleepSec := 1
+
+	for n := 0; n < 1000; n++ {
 		for n := 0; n < 100; n++ {
 			key := dataKey[rand.Intn(len(dataKey))]
 			data := dataValue[rand.Intn(len(dataValue))]
 			producer.Produce(&kafka.Message{
-				TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: int32(n)},
+				TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: int32(0)},
 				Key:            []byte(key),
 				Value:          []byte(data),
 			}, nil)
+
 		}
-		// Wait for all messages to be delivered
-		sleepSec := 10
+		producer.Flush(15 * 1000)
 		log.Printf("Sleeping for %d sec\n", sleepSec)
 		time.Sleep(time.Duration(sleepSec) * time.Second)
-		producer.Flush(15 * 1000)
 	}
 
 	producer.Close()
